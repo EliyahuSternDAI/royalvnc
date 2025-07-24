@@ -342,7 +342,9 @@ private extension VNCConnection {
 		Task {
 			do {
 				try await handshake()
-				try await sendFramebufferUpdateRequest()
+                if (settings.requestFramebufferUpdates) {
+                    try await sendFramebufferUpdateRequest()
+                }
 			} catch {
 				handleBreakingError(error)
 

@@ -1,0 +1,80 @@
+//
+//  vnc.proto
+//  RoyalVNCKit
+//
+//  Created by Eliyahu Stern on 7/22/25.
+//
+
+syntax = "proto3";
+
+package vnc;
+
+service VNCService {
+  // Start a new VNC session
+  rpc StartSession(StartSessionRequest) returns (StartSessionResponse);
+  // Stop a VNC session
+  rpc StopSession(StopSessionRequest) returns (EventAck);
+
+  // Send pointer events (mouse move)
+  rpc SendPointerEvent(PointerEvent) returns (EventAck);
+  // Send mouse button events (clicks)
+  rpc SendMouseButtonEvent(MouseButtonEvent) returns (EventAck);
+  // Send mouse wheel events
+  rpc SendMouseWheelEvent(MouseWheelEvent) returns (EventAck);
+  // Send keycode events (including modifiers)
+  rpc SendKeyEvent(KeyEvent) returns (EventAck);
+}
+
+message StartSessionRequest {
+  string hostname = 1;
+  optional uint32 port = 2;
+  string username = 3;
+  optional string password = 4;
+  optional bool shared = 5;
+}
+
+message StartSessionResponse {
+  string sessionID = 1;
+  bool success = 2;
+  string message = 3;
+}
+
+message StopSessionRequest {
+  string sessionID = 1;
+}
+
+// Message for pointer events
+message PointerEvent {
+  string sessionID = 1;
+  uint32 x = 2;
+  uint32 y = 3;
+}
+
+message MouseButtonEvent {
+  string sessionID = 1;
+  uint32 button = 2; // 0 for left, 1 for middle, 2 for right
+  int32 x = 3; // mouse horizontal location during the event
+  int32 y = 4; // mouse vertical location during the event
+  bool pressed = 5; // true for button down, false for button up
+}
+
+// Message for mouse wheel events
+message MouseWheelEvent {
+  string sessionID = 1;
+  int32 x = 2; // mouse horizontal location during the event
+  int32 y = 3; // mouse vertical location during the event
+  int32 steps = 4; // vertical scroll amount
+}
+
+// Message for key events
+message KeyEvent {
+  string sessionID = 1;
+  uint32 keycode = 2;
+  bool pressed = 3;
+  repeated string modifiers = 4; // e.g., "Shift", "Ctrl", "Alt"
+}
+
+message EventAck {
+  bool success = 1;
+  string message = 2;
+}

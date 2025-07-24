@@ -62,7 +62,12 @@ public extension VNCConnection {
 		public var _objc_frameEncodings: [Int64] {
 			frameEncodings.map({ $0.rawValue.rawValue })
 		}
-
+        
+#if canImport(ObjectiveC)
+        @objc
+#endif
+        public var requestFramebufferUpdates: Bool = true
+        
 		public init(isDebugLoggingEnabled: Bool,
 					hostname: String,
 					port: UInt16,
