@@ -5,6 +5,7 @@ class VNCSessionManager {
     nonisolated(unsafe) static let shared = VNCSessionManager()
     private var sessions: [UUID: VNCConnection] = [:]
     private var delegates: [UUID: ConnectionDelegate] = [:]
+    private var configs: [UUID: SessionConfig] = [:]
     private let queue = DispatchQueue(label: "VNCSessionManager.queue")
 
     struct SessionConfig {
@@ -36,6 +37,7 @@ class VNCSessionManager {
         queue.sync {
             sessions[sessionID] = connection
             delegates[sessionID] = connectionDelegate // Keep strong reference
+            configs[sessionID] = config
         }
         connection.connect()
         return sessionID
@@ -47,6 +49,7 @@ class VNCSessionManager {
                 connection.disconnect()
                 sessions.removeValue(forKey: sessionID)
                 delegates.removeValue(forKey: sessionID) // Remove strong reference
+                configs.removeValue(forKey: sessionID)
             }
         }
     }
@@ -54,6 +57,19 @@ class VNCSessionManager {
     func getSession(sessionID: UUID) -> VNCConnection? {
         return queue.sync {
             sessions[sessionID]
+        }
+    }
+
+    func allSessionInfo() -> [Vnc_SessionInfo] {
+        return queue.sync {
+            configs.map { (sessionID, config) in
+                Vnc_SessionInfo.with {
+                    $0.sessionID = sessionID.uuidString
+                    $0.hostname = config.hostname
+                    $0.port = UInt32(config.port)
+                    $0.username = config.username
+                }
+            }
         }
     }
 

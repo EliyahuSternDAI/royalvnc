@@ -1,54 +1,53 @@
-[![CI](https://github.com/royalapplications/royalvnc/actions/workflows/ci.yml/badge.svg)](https://github.com/royalapplications/royalvnc/actions/workflows/ci.yml)
+# RoyalVNCKit Fork
 
-![RoyalVNC](Design/Banner_Rendered/Banner.png)
+This repository is a fork of the original [RoyalVNCKit](https://github.com/royalapps/RoyalVNCKit) SDK. It has been modified to include a gRPC service for programmatic VNC control and to support modern development environments. The original README from the forked repository has been preserved as `README_original_fork.md`.
 
-RoyalVNC is a modern, high performance implementation of the [VNC/RFB protocol](https://github.com/rfbproto/rfbproto/blob/master/rfbproto.rst) written in Swift.
-The SDK (RoyalVNCKit) is compatible with Swift, Objective-C, C and C# on macOS, iOS, iPadOS, Linux and Windows.
-It has no external dependencies but includes some free (public domain) third party code from the libtommath, libtomcrypt and D3DES libraries (see [Credits](#Credits)).
+This project provides `RoyalVNCTool`, a command-line utility that runs a gRPC service for interacting with VNC servers, and `RoyalVNCKitGUIDemo`, a graphical VNC client for testing.
 
-## Supported Features
+## Getting Started
 
-### Security Types (Authentication Methods)
-- No Authentication
-- VNC Password
-- Apple Remote Desktop
-- UltraVNC MS-Logon II
+Follow these steps to set up your local environment, build, and run the tools.
 
-### Encodings
-- Zlib
-- ZRLE
-- Hextile
-- CoRRE
-- RRE
-- CopyRect
+### Prerequisites
 
-### Pseudo Encodings
-- LastRect
-- CompressionLevel
-- DesktopName
-- Cursor
-- DesktopSize
-- ExtendedDesktopSize
-- ContinuousUpdates
+Before you begin, ensure your development environment meets the following requirements:
 
-### Misc. Features
-- Support for 8-bit, 16-bit and 24/32-bit color depths with high-performance framebuffer implementations.
-- Clipboard redirection support for text in both ways (remote to local and local to remote).
-- Connection state management and rendering is decoupled from each other, so it's possible to build "headless" clients (ie. no rendering of the remote desktop).
-- The SDK includes a ready-to-use implementation of a framebuffer view for macOS (subclass of `NSView`), which also handles mouse and keyboard input, local cursor (`NSCursor`), scaling and rendering. The iOS/iPadOS equivalent (`UIView`) is a work-in-progress.
-- First-class error handling. The `VNCError` type divides all possible errors into three broad categories: Protocol, Authentication and Connection errors. There are helper functions to retrieve human-readable descriptions for all errors and a convenience functions that allows the SDK consumer to distinguish between errors that should be displayed to the user and ones that shouldn't.
-- Headless CLI demos (one using Swift and another one using the C API) are included in the repository.
-- The repository also contains C# bindings so the library can be used with .NET.
-- [This repository](https://github.com/royalapplications/royalvnc-demo) contains Demo/Sample clients for macOS (one written in Swift, one in Objective-C) and iOS/iPadOS.
+*   **macOS:** Version 11.0 (Big Sur) or newer.
+*   **Xcode Command Line Tools:** Required for the Swift compiler and other build tools.
+*   **Homebrew:** A package manager for macOS, used to install dependencies.
 
-## Usage
-See [Usage](USAGE.md).
+### 1. Install Prerequisites
 
-## License
-[MIT License](LICENSE)
+If you don't have the tools installed, please install them.
 
-## Credits
-- [libtommath](https://github.com/libtom/libtommath) ([The LibTom license](https://github.com/libtom/libtommath/blob/develop/LICENSE))
-- [libtomcrypt](https://github.com/libtom/libtomcrypt) ([The LibTom license](https://github.com/libtom/libtomcrypt/blob/develop/LICENSE))
-- [zlib](https://github.com/madler/zlib) ([zlib license](https://github.com/madler/zlib/blob/develop/LICENSE))
-- D3DES (Public Domain, Copyright Richard Outerbridge)
+*   **Xcode Command Line Tools:**
+    ```bash
+    xcode-select --install
+    ```
+
+*   **Homebrew:**
+    ```bash
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    ```
+
+### 2. Run the Environment Setup Script
+
+This repository includes a script that handles the complete setup process, including initializing submodules and installing all dependencies. From the root of the repository, run:
+
+```bash
+./setup_environment.sh
+```
+This script will:
+1.  Initialize and clone the `grpc-swift` submodule.
+2.  Install `protoc` and `grpcurl` using Homebrew.
+3.  Build the `protoc-gen-grpc-swift` code generator plugin.
+
+## Building and Running
+
+For detailed instructions on building, running, and testing the `RoyalVNCTool`, please refer to the **[README in its source directory](./Sources/RoyalVNCTool/README.md)**. It contains comprehensive information on:
+
+-   Building for different architectures (Intel, Apple Silicon).
+-   Running the gRPC service.
+-   Testing with provided scripts.
+-   Session management.
+-   Code signing and entitlements.

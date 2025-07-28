@@ -18,9 +18,8 @@ import Android
 #endif
 
 import RoyalVNCKit
-import GRPCCore
-import GRPCNIOTransportHTTP2
-import GRPCProtobuf
+import GRPC
+import NIO
 
 import Dispatch
 
@@ -29,20 +28,21 @@ enum ServerSocketSpec {
     case tcp(Int)
 }
 
-@available(macOS 15.0, *)
-final actor ShutdownManager {
-    var server: GRPCServer<HTTP2ServerTransport.Posix>? = nil
-    func setServer(_ s: GRPCServer<HTTP2ServerTransport.Posix>) async {
-        server = s
+actor ShutdownManager {
+    private var server: Server?
+
+    func setServer(_ s: Server) {
+        self.server = s
     }
-    func shutdownServer() async {
-        server?.beginGracefulShutdown()
+
+    func shutdownServer() {
+        // This is non-blocking, so it's safe to call from a synchronous context
+        // if needed, but the actor guarantees mutual exclusion.
+        server?.close().whenComplete { _ in }
     }
 }
 
-// Global atomic flag for signal handler
 let shutdownRequested = ManagedAtomic(false)
-@available(macOS 15.0, *)
 let shutdownManager = ShutdownManager()
 
 func vncShutdownHandler(signal: Int32) {
@@ -50,8 +50,7 @@ func vncShutdownHandler(signal: Int32) {
 }
 
 @main
-@available(macOS 15.0, *)
-struct VNCClientTool: AsyncParsableCommand {
+struct VNCClientTool: ParsableCommand {
     @Flag(name: [.customShort("d"), .long], help: "Enable debug output")
     var debug: Bool = false
 
@@ -76,45 +75,51 @@ struct VNCClientTool: AsyncParsableCommand {
         return nil
     }
     
-    @available(macOS 15.0, *)
-    func run() async throws {
+    func run() throws {
+        let logger = VNCPrintLogger()
+        
+        if debug {
+            logger.isDebugLoggingEnabled = true
+        }
+                
         print("Starting gRPC server on \(socketSpec.map { String(describing: $0) } ?? "none")")
         shutdownRequested.store(false, ordering: .relaxed)
         signal(SIGINT, vncShutdownHandler)
         signal(SIGTERM, vncShutdownHandler)
 
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
+        defer { try? group.syncShutdownGracefully() }
+
+        let service: any CallHandlerProvider = VNCServiceImpl()
+        let server: Server
         switch socketSpec {
         case .unix(let path):
-            let s = GRPCServer(
-                transport: .http2NIOPosix(
-                    address: .unixDomainSocket(path: path),
-                    transportSecurity: .plaintext
-                ),
-                services: [VNCServiceImpl()]
-            )
-            await shutdownManager.setServer(s)
-            try await s.serve()
+            server = try Server.insecure(group: group)
+                .withServiceProviders([service])
+                .bind(unixDomainSocketPath: path)
+                .wait()
         case .tcp(let sPort):
-            let s = GRPCServer(
-                transport: .http2NIOPosix(
-                    address: .ipv4(host: "127.0.0.1", port: sPort),
-                    transportSecurity: .plaintext
-                ),
-                services: [VNCServiceImpl()]
-            )
-            await shutdownManager.setServer(s)
-            try await s.serve()
+            server = try Server.insecure(group: group)
+                .withServiceProviders([service])
+                .bind(host: "127.0.0.1", port: sPort)
+                .wait()
         case .none:
             print("Error: No valid socket specification provided.")
             Foundation.exit(EXIT_FAILURE)
         }
 
+        Task {
+            await shutdownManager.setServer(server)
+        }
+
         // Poll for shutdownRequested
         while !shutdownRequested.load(ordering: .relaxed) {
-            try await Task.sleep(nanoseconds: 100_000_000) // 100ms
+            Thread.sleep(forTimeInterval: 0.1) // 100ms
         }
         print("Shutdown requested, stopping server and sessions...")
-        await shutdownManager.shutdownServer()
+        Task {
+            await shutdownManager.shutdownServer()
+        }
         VNCSessionManager.shared.shutdownAllSessions()
     }
 }
